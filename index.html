@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#172554">
+<title>Snakes & Ladders</title>
+<style>
+  :root{--ink:#172033;--muted:#64748b;--paper:#f8fafc;--blue:#2563eb;--green:#16a34a;--line:#cbd5e1}
+  *{box-sizing:border-box}
+  body{margin:0;background:linear-gradient(145deg,#eff6ff,#f8fafc 45%,#ecfdf5);font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:var(--ink);min-height:100vh}
+  button,input,select{font:inherit}
+  button{cursor:pointer}
+  button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #f59e0b;outline-offset:3px}
+  .app{max-width:1180px;margin:auto;padding:clamp(12px,3vw,28px)}
+  header{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:18px}
+  h1{font-size:clamp(1.5rem,4vw,2.5rem);margin:0;letter-spacing:-.04em}
+  .subtitle{color:var(--muted);margin:5px 0 0;font-size:.95rem}
+  .pill{border:1px solid #cbd5e1;background:#fff;border-radius:999px;padding:9px 13px;color:var(--ink);font-weight:700}
+  .panel{background:#fff;border:1px solid #dbe4ef;border-radius:20px;box-shadow:0 12px 35px #0f172a0d;padding:clamp(14px,2.5vw,24px)}
+  .setup{max-width:680px;margin:24px auto}
+  .setup h2,.side h2{margin:0 0 14px}
+  .field{display:flex;flex-direction:column;gap:6px;margin:12px 0}
+  label{font-weight:700;font-size:.92rem}
+  input[type=text],select{width:100%;border:1px solid #cbd5e1;border-radius:10px;padding:11px 12px;background:#fff;color:var(--ink)}
+  .player-config{display:grid;grid-template-columns:minmax(0,1fr) 110px 145px;gap:10px;align-items:end;padding:12px 0;border-bottom:1px solid #e2e8f0}
+  .player-config:last-child{border-bottom:0}
+  .color-field input{width:100%;height:43px;border:1px solid #cbd5e1;border-radius:10px;background:#fff;padding:4px}
+  .toggle{display:flex;align-items:center;gap:10px;margin:16px 0;color:#334155}
+  .toggle input{width:19px;height:19px;accent-color:#2563eb}
+  .primary,.secondary{border:0;border-radius:12px;padding:12px 18px;font-weight:800;transition:transform .15s,filter .15s}
+  .primary{background:#1d4ed8;color:white;box-shadow:0 5px 0 #1e40af}
+  .secondary{background:#e2e8f0;color:#172033}
+  button:hover{filter:brightness(1.04)}button:active{transform:translateY(2px)}
+  .primary:disabled{opacity:.55;cursor:not-allowed;transform:none}
+  .start{width:100%;margin-top:8px}
+  .game-layout{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(270px,.8fr);gap:20px;align-items:start}
+  .board-wrap{padding:clamp(5px,1.5vw,14px);background:#fff;border:1px solid #dbe4ef;border-radius:20px;box-shadow:0 12px 35px #0f172a0d}
+  .board{width:100%;aspect-ratio:1;position:relative;display:grid;grid-template-columns:repeat(10,minmax(0,1fr));grid-template-rows:repeat(10,minmax(0,1fr));overflow:hidden;border:2px solid #334155;border-radius:10px;background:#fff;isolation:isolate}
+  .cell{position:relative;min-width:0;min-height:0;border:1px solid #cbd5e1;display:flex;align-items:flex-start;justify-content:flex-start;padding:3px;background:#f8fafc}
+  .cell:nth-child(odd){background:#eff6ff}
+  .cell.special-start{background:#dcfce7}.cell.special-end{background:#fef3c7}
+  .num{position:relative;z-index:1;font-size:clamp(8px,1.25vw,14px);font-weight:800;color:#334155;line-height:1}
+  .cell .tokens{position:absolute;z-index:4;left:2px;right:2px;bottom:2px;display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:1px}
+  .token{width:clamp(9px,1.6vw,18px);height:clamp(9px,1.6vw,18px);border-radius:50%;border:2px solid #fff;box-shadow:0 1px 3px #0f172a80;transition:transform .14s ease;flex:0 0 auto}
+  .token.moving{transform:translateY(-4px) scale(1.12)}
+  .overlay{position:absolute;inset:0;width:100%;height:100%;z-index:2;pointer-events:none;overflow:visible}
+  .snake-body{fill:none;stroke:#dc2626;stroke-width:20;stroke-linecap:round;stroke-linejoin:round;opacity:.76}
+  .snake-inner{fill:none;stroke:#fca5a5;stroke-width:7;stroke-linecap:round;stroke-dasharray:8 11;opacity:.95}
+  .snake-head{fill:#b91c1c;stroke:#fff;stroke-width:3}
+  .snake-eye{fill:#fff}
+  .ladder-rail{stroke:#a16207;stroke-width:10;stroke-linecap:round;opacity:.95}
+  .ladder-rung{stroke:#fef3c7;stroke-width:6;stroke-linecap:round}
+  .side{display:flex;flex-direction:column;gap:15px}
+  .turn-card{background:#172554;color:#fff;border-radius:18px;padding:17px;display:flex;align-items:center;gap:15px}
+  .turn-dot{width:17px;height:17px;border:2px solid #fff;border-radius:50%;flex:none}
+  .turn-title{font-size:.8rem;color:#cbd5e1;text-transform:uppercase;letter-spacing:.09em;font-weight:800}
+  .turn-name{font-size:1.35rem;font-weight:900;line-height:1.2;margin-top:3px}
+  .dice-area{display:flex;align-items:center;gap:18px}
+  .die{width:94px;height:94px;flex:none;background:#fff;border:3px solid #cbd5e1;border-radius:20px;box-shadow:0 7px 0 #cbd5e1;display:grid;grid-template:repeat(3,1fr)/repeat(3,1fr);padding:12px;gap:3px;transform:rotate(0)}
+  .pip{background:#172554;border-radius:50%;width:100%;height:100%;visibility:hidden}
+  .pip.show{visibility:visible}
+  .die.rolling{animation:shake .65s ease-in-out}
+  @keyframes shake{0%{transform:rotate(0) scale(1)}20%{transform:rotate(18deg) scale(1.08)}40%{transform:rotate(-20deg) scale(.96)}60%{transform:rotate(14deg) scale(1.04)}80%{transform:rotate(-9deg)}100%{transform:rotate(0) scale(1)}}
+  .roll-copy{min-width:0}.roll-copy p{margin:4px 0 0;color:var(--muted);font-size:.9rem}
+  .roll-btn{width:100%;margin-top:18px;font-size:1.1rem;padding:15px}
+  .status{min-height:24px;color:#334155;font-weight:700;margin-top:12px}
+  .player-list{display:flex;flex-direction:column;gap:9px}
+  .player-row{display:flex;align-items:center;gap:10px;padding:9px 10px;border:1px solid #e2e8f0;border-radius:12px}
+  .player-row.active{border-color:#2563eb;background:#eff6ff}
+  .player-swatch{width:15px;height:15px;border:2px solid white;box-shadow:0 0 0 1px #94a3b8;border-radius:50%;flex:none}
+  .player-info{flex:1;min-width:0}.player-name{font-weight:800;overflow-wrap:anywhere}.player-pos{font-size:.82rem;color:#64748b}
+  .log{margin:0;padding:0 0 0 20px;max-height:205px;overflow:auto;color:#334155;font-size:.9rem}
+  .log li{padding:5px 0;line-height:1.35}
+  .log li::marker{color:#64748b}
+  .bottom-actions{display:flex;gap:8px;flex-wrap:wrap}
+  .winner{position:fixed;inset:0;z-index:10;background:#0f172ae0;display:grid;place-items:center;padding:20px}
+  .winner[hidden]{display:none}
+  .winner-card{width:min(100%,440px);text-align:center;background:#fff;border-radius:24px;padding:30px;box-shadow:0 25px 80px #0005}
+  .trophy{font-size:4rem;line-height:1.3}.winner-card h2{font-size:2rem;margin:5px 0}.winner-card p{color:#475569}
+  .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+  footer{text-align:center;color:#64748b;font-size:.8rem;padding:20px 0 4px}
+  @media(max-width:820px){.game-layout{grid-template-columns:1fr}.side{display:grid;grid-template-columns:1fr 1fr;align-items:start}.side .turn-card,.side .roll-panel{grid-column:1/-1}.board-wrap{max-width:700px;width:100%;margin:auto}.num{font-size:clamp(8px,2.2vw,14px)}}
+  @media(max-width:500px){.app{padding:10px}.subtitle{font-size:.82rem}.player-config{grid-template-columns:minmax(0,1fr) 72px;gap:8px}.player-config .type-field{grid-column:1/-1}.player-config .color-field{grid-column:2;grid-row:1}.side{display:flex}.die{width:78px;height:78px;padding:10px;border-radius:16px}.cell{padding:2px}.num{font-size:clamp(7px,2.4vw,11px)}.panel{border-radius:16px}}
+  @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important;transition-duration:.01ms!important}}
+</style>
+
+<link rel="manifest" href="./manifest.webmanifest">
+<meta name="theme-color" content="#172554">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="icon" type="image/png" href="./icons/icon-192.png">
+<link rel="apple-touch-icon" href="./icons/icon-192.png">
+\n</head>
+<body>
+<div class="app">
+  <header>
+    <div><h1>🐍 Snakes &amp; Ladders</h1><p class="subtitle">Roll the die. Climb high. Watch out below!</p></div>
+    <button class="pill" id="muteBtn" aria-pressed="false" aria-label="Mute sound effects">🔊 Sound on</button>
+  </header>
+
+  <main>
+    <section id="setupScreen" class="panel setup" aria-labelledby="setupTitle">
+      <h2 id="setupTitle">Set up your game</h2>
+      <div class="field"><label for="playerCount">Number of players</label>
+        <select id="playerCount"><option value="2">2 players</option><option value="3">3 players</option><option value="4">4 players</option></select>
+      </div>
+      <div id="playerFields"></div>
+      <label class="toggle"><input id="extraSix" type="checkbox"> Roll a 6 to get an extra turn</label>
+      <button id="startBtn" class="primary start">Start game</button>
+      <p style="color:#64748b;font-size:.85rem;margin-bottom:0">You can play locally with friends or add computer opponents.</p>
+    </section>
+
+    <section id="gameScreen" hidden aria-label="Game in progress">
+      <div class="game-layout">
+        <div class="board-wrap"><div id="board" class="board" role="img" aria-label="Snakes and ladders board numbered 1 to 100"></div></div>
+        <aside class="side">
+          <div id="turnCard" class="turn-card" aria-live="polite">
+            <span id="turnDot" class="turn-dot"></span><div><div class="turn-title">Current turn</div><div id="turnName" class="turn-name">Player</div></div>
+          </div>
+          <section class="panel roll-panel" aria-label="Dice controls">
+            <div class="dice-area">
+              <div id="die" class="die" role="img" aria-label="Die showing 1"></div>
+              <div class="roll-copy"><strong id="diceTitle">Ready to roll?</strong><p id="diceHint">Roll from 1 to 6.</p></div>
+            </div>
+            <button id="rollBtn" class="primary roll-btn">🎲 Roll</button>
+            <div id="status" class="status" aria-live="polite">It's your turn.</div>
+          </section>
+          <section class="panel"><h2>Players</h2><div id="playerList" class="player-list"></div></section>
+          <section class="panel"><h2>Move log</h2><ol id="moveLog" class="log" aria-live="polite" aria-relevant="additions"></ol><p id="emptyLog" style="color:#64748b;font-size:.9rem;margin-bottom:0">Your moves will appear here.</p></section>
+          <div class="bottom-actions"><button id="newGameBtn" class="secondary">New game</button><button id="clearSaveBtn" class="secondary" title="Delete the saved game and return to setup">Reset saved game</button></div>
+        </aside>
+      </div>
+    </section>
+  </main>
+  <footer>Game progress saves automatically on this device.</footer>
+</div>
+
+<div id="winnerModal" class="winner" hidden role="dialog" aria-modal="true" aria-labelledby="winnerTitle">
+  <div class="winner-card"><div class="trophy" aria-hidden="true">🏆</div><h2 id="winnerTitle">We have a winner!</h2><p id="winnerText"></p><button id="againBtn" class="primary start">Play again</button></div>
+</div>
+
+<script>
+(() => {
+  "use strict";
+
+  // ===== Game constants and state =====
+  const STORAGE_KEY = "snakesLaddersSave_v1";
+  const COLORS = ["#e53935", "#2563eb", "#16a34a", "#9333ea"];
+  const SNAKES = [[16,6],[47,26],[49,11],[56,53],[62,19],[64,60],[87,24],[93,73],[95,75],[98,78]];
+  const LADDERS = [[1,38],[4,14],[9,31],[21,42],[28,84],[36,44],[51,67],[71,91],[80,100]];
+  const PIPS = {1:[4],2:[0,8],3:[0,4,8],4:[0,2,6,8],5:[0,2,4,6,8],6:[0,2,3,5,6,8]};
+  const $ = id => document.getElementById(id);
+  let state = null;
+  let busy = false;
+  let muted = false;
+  let audioCtx = null;
+
+  // ===== Setup rendering =====
+  function renderPlayerFields() {
+    const count = Number($("playerCount").value);
+    const previous = [...document.querySelectorAll(".player-config")].map((row, i) => ({
+      name: row.querySelector(".player-name-input")?.value || `Player ${i+1}`,
+      color: row.querySelector(".color-input")?.value || COLORS[i],
+      type: row.querySelector(".type-select")?.value || "human"
+    }));
+    $("playerFields").innerHTML = "";
+    for (let i=0; i<count; i++) {
+      const p = previous[i] || {name:`Player ${i+1}`, color:COLORS[i], type:"human"};
+      const row = document.createElement("div");
+      row.className = "player-config";
+      row.innerHTML = `
+        <div class="field" style="margin:0"><label for="playerName${i}">Player ${i+1} name</label><input id="playerName${i}" class="player-name-input" type="text" maxlength="18" value="${escapeAttr(p.name)}" autocomplete="off"></div>
+        <div class="field color-field" style="margin:0"><label for="playerColor${i}">Color</label><input id="playerColor${i}" class="color-input" type="color" value="${escapeAttr(p.color)}" aria-label="Player ${i+1} token color"></div>
+        <div class="field type-field" style="margin:0"><label for="playerType${i}">Player type</label><select id="playerType${i}" class="type-select"><option value="human" ${p.type==="human"?"selected":""}>Human</option><option value="computer" ${p.type==="computer"?"selected":""}>Computer</option></select></div>`;
+      $("playerFields").appendChild(row);
+    }
+  }
+  function escapeAttr(value) { return String(value).replace(/[&<>"']/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch])); }
+
+  // ===== Board coordinate helpers and rendering =====
+  function squareToCell(n) {
+    const rowFromBottom = Math.floor((n-1)/10);
+    const offset = (n-1)%10;
+    const col = rowFromBottom % 2 === 0 ? offset : 9-offset;
+    return {row:9-rowFromBottom, col};
+  }
+  function squareCenter(n) {
+    const {row,col} = squareToCell(n);
+    return {x:col*100+50, y:row*100+50};
+  }
+  function renderBoard() {
+    const board = $("board");
+    board.innerHTML = "";
+    // DOM cells are placed by explicit grid coordinates to preserve boustrophedon numbering.
+    for (let n=1; n<=100; n++) {
+      const {row,col} = squareToCell(n);
+      const cell = document.createElement("div");
+      cell.className = "cell" + (n===1 ? " special-start" : "") + (n===100 ? " special-end" : "");
+      cell.style.gridRow = String(row+1);
+      cell.style.gridColumn = String(col+1);
+      cell.dataset.square = String(n);
+      cell.innerHTML = `<span class="num">${n}</span><div class="tokens" id="tokens-${n}"></div>`;
+      board.appendChild(cell);
+    }
+    board.appendChild(drawBoardOverlay());
+    renderTokens();
+  }
+  function svgEl(tag, attrs={}) {
+    const el = document.createElementNS("http://www.w3.org/2000/svg", tag);
+    for (const [key,val] of Object.entries(attrs)) el.setAttribute(key, String(val));
+    return el;
+  }
+  function drawBoardOverlay() {
+    const svg = svgEl("svg",{class:"overlay",viewBox:"0 0 1000 1000","preserveAspectRatio":"none","aria-hidden":"true"});
+    // Snakes: curved red bodies with a clearly marked head and a lighter inner pattern.
+    for (const [head,tail] of SNAKES) {
+      const a=squareCenter(head), b=squareCenter(tail);
+      const dx=b.x-a.x, dy=b.y-a.y;
+      const bend=(head+tail)%2===0 ? 1 : -1;
+      const c1={x:a.x+dx*.18+bend*65,y:a.y+dy*.38};
+      const c2={x:a.x+dx*.82-bend*65,y:a.y+dy*.62};
+      const d=`M ${a.x} ${a.y} C ${c1.x} ${c1.y}, ${c2.x} ${c2.y}, ${b.x} ${b.y}`;
+      svg.appendChild(svgEl("path",{d,class:"snake-body"}));
+      svg.appendChild(svgEl("path",{d,class:"snake-inner"}));
+      svg.appendChild(svgEl("circle",{cx:a.x,cy:a.y,r:19,class:"snake-head"}));
+      svg.appendChild(svgEl("circle",{cx:a.x-6,cy:a.y-3,r:3.5,class:"snake-eye"}));
+      svg.appendChild(svgEl("circle",{cx:a.x+6,cy:a.y-3,r:3.5,class:"snake-eye"}));
+      svg.appendChild(svgEl("path",{d:`M ${a.x-7} ${a.y+7} Q ${a.x} ${a.y+13} ${a.x+7} ${a.y+7}`,fill:"none",stroke:"#fff","stroke-width":3,"stroke-linecap":"round"}));
+    }
+    // Ladders: two rails plus regularly spaced rungs along each climb.
+    for (const [base,top] of LADDERS) {
+      const a=squareCenter(base), b=squareCenter(top);
+      const dx=b.x-a.x, dy=b.y-a.y;
+      const length=Math.hypot(dx,dy) || 1;
+      const px=-dy/length*13, py=dx/length*13;
+      for (const side of [-1,1]) {
+        svg.appendChild(svgEl("line",{x1:a.x+px*side,y1:a.y+py*side,x2:b.x+px*side,y2:b.y+py*side,class:"ladder-rail"}));
+      }
+      const rungs=Math.max(3,Math.floor(length/38));
+      for(let i=1;i<rungs;i++){
+        const t=i/rungs, cx=a.x+dx*t, cy=a.y+dy*t;
+        svg.appendChild(svgEl("line",{x1:cx+px,y1:cy+py,x2:cx-px,y2:cy-py,class:"ladder-rung"}));
+      }
+    }
+    return svg;
+  }
+  function renderTokens() {
+    if (!state) return;
+    for(let n=1;n<=100;n++) {
+      const slot=$(`tokens-${n}`);
+      if(slot) slot.innerHTML="";
+    }
+    state.players.forEach((p,i)=>{
+      if(p.position<1 || p.position>100) return;
+      const slot=$(`tokens-${p.position}`);
+      if(!slot) return;
+      const token=document.createElement("span");
+      token.className="token" + (state.current===i && busy ? " moving":"");
+      token.style.background=p.color;
+      token.setAttribute("aria-label",`${p.name} on square ${p.position}`);
+      token.title=`${p.name}: square ${p.position}`;
+      slot.appendChild(token);
+    });
+  }
+
+  // ===== Dice and sound =====
+  function renderDie(value) {
+    const die=$("die");
+    die.innerHTML="";
+    for(let i=0;i<9;i++){
+      const pip=document.createElement("span");
+      pip.className="pip"+(PIPS[value].includes(i)?" show":"");
+      die.appendChild(pip);
+    }
+    die.setAttribute("aria-label",`Die showing ${value}`);
+  }
+  function playTone(freq, duration=.12, type="sine", volume=.035) {
+    if(muted) return;
+    try {
+      audioCtx ||= new (window.AudioContext || window.webkitAudioContext)();
+      if(audioCtx.state==="suspended") audioCtx.resume();
+      const osc=audioCtx.createOscillator(), gain=audioCtx.createGain();
+      osc.type=type; osc.frequency.value=freq; gain.gain.value=volume;
+      gain.gain.exponentialRampToValueAtTime(.001,audioCtx.currentTime+duration);
+      osc.connect(gain);gain.connect(audioCtx.destination);osc.start();osc.stop(audioCtx.currentTime+duration);
+    } catch (_) { /* Sound is optional; gameplay works if audio is unavailable. */ }
+  }
+  function sound(kind) {
+    if(kind==="dice"){playTone(240,.07,"square");setTimeout(()=>playTone(360,.08,"square"),70)}
+    if(kind==="climb"){playTone(440,.12);setTimeout(()=>playTone(590,.12),110);setTimeout(()=>playTone(740,.18),220)}
+    if(kind==="slide"){playTone(420,.22,"sawtooth");setTimeout(()=>playTone(250,.24,"sawtooth"),130)}
+    if(kind==="win"){[523,659,784,1046].forEach((f,i)=>setTimeout(()=>playTone(f,.22),i*130))}
+  }
+
+  // ===== State persistence =====
+  function saveGame() {
+    if(!state) return;
+    try { localStorage.setItem(STORAGE_KEY,JSON.stringify(state)); } catch (_) {}
+  }
+  function loadGame() {
+    try {
+      const saved=JSON.parse(localStorage.getItem(STORAGE_KEY)||"null");
+      if(saved && Array.isArray(saved.players) && saved.players.length>=2 && saved.players.length<=4 &&
+         Number.isInteger(saved.current) && saved.current>=0 && saved.current<saved.players.length &&
+         saved.players.every(p=>typeof p.name==="string" && Number.isInteger(p.position) && p.position>=1 && p.position<=100)) {
+        state=saved; return true;
+      }
+    } catch (_) {}
+    return false;
+  }
+  function clearSavedGame() { try { localStorage.removeItem(STORAGE_KEY); } catch (_) {} }
+
+  // ===== Game UI rendering =====
+  function renderPlayerList() {
+    $("playerList").innerHTML="";
+    state.players.forEach((p,i)=>{
+      const row=document.createElement("div");
+      row.className="player-row"+(state.current===i && !state.winner?" active":"");
+      row.innerHTML=`<span class="player-swatch" style="background:${escapeAttr(p.color)}"></span><div class="player-info"><div class="player-name">${escapeAttr(p.name)}${p.type==="computer"?" <span style='font-weight:500;color:#64748b'>(CPU)</span>":""}</div><div class="player-pos">Square ${p.position} of 100</div></div>${p.position===100?"🏆":""}`;
+      $("playerList").appendChild(row);
+    });
+  }
+  function renderLog() {
+    const log=$("moveLog"); log.innerHTML="";
+    const entries=(state.log||[]).slice(-30).reverse();
+    entries.forEach(entry=>{const li=document.createElement("li");li.textContent=entry;log.appendChild(li)});
+    $("emptyLog").hidden=entries.length>0;
+  }
+  function renderGame() {
+    $("setupScreen").hidden=true; $("gameScreen").hidden=false;
+    renderBoard();renderDie(state.lastRoll||1);renderPlayerList();renderLog();updateTurnUI();
+    if(state.winner!==null && state.winner!==undefined) showWinner();
+  }
+  function updateTurnUI() {
+    const p=state.players[state.current];
+    $("turnName").textContent=p.name+(p.type==="computer"?" (Computer)":"");
+    $("turnDot").style.background=p.color;
+    $("rollBtn").disabled=busy || state.winner!==null && state.winner!==undefined;
+    $("rollBtn").textContent=p.type==="computer"?"🤖 Computer is thinking…":"🎲 Roll";
+    $("diceTitle").textContent=state.lastRoll?`Last roll: ${state.lastRoll}`:"Ready to roll?";
+    $("diceHint").textContent=state.extraSix?"A 6 earns another turn.":"Roll from 1 to 6.";
+    $("status").textContent=state.winner!==null && state.winner!==undefined ? `${p.name} won the game!` : `${p.name}'s turn.`;
+    renderPlayerList();
+  }
+  function addLog(text) {
+    state.log ||= [];state.log.push(text);state.log=state.log.slice(-50);
+    renderLog();saveGame();
+  }
+  const sleep = ms => new Promise(resolve=>setTimeout(resolve,ms));
+
+  // ===== Rules logic and turn flow =====
+  async function movePlayerBySteps(player, steps, index) {
+    const target=player.position+steps;
+    if(target>100) {
+      addLog(`${player.name} rolled ${steps} but needs an exact roll to reach 100.`);
+      $("status").textContent="Too high — stay where you are.";
+      return {special:false,won:false};
+    }
+    for(let pos=player.position+1;pos<=target;pos++){
+      player.position=pos;renderTokens();renderPlayerList();
+      await sleep(window.matchMedia("(prefers-reduced-motion: reduce)").matches?20:150);
+    }
+    if(player.position===100) {
+      state.winner=index;addLog(`${player.name} rolled ${steps} and reached 100. ${player.name} wins!`);
+      sound("win");saveGame();renderPlayerList();updateTurnUI();showWinner();
+      return {special:false,won:true};
+    }
+    const ladder=LADDERS.find(pair=>pair[0]===player.position);
+    if(ladder) {
+      addLog(`${player.name} rolled ${steps} and climbed from ${ladder[0]} to ${ladder[1]}.`);
+      $("status").textContent=`🪜 ${player.name} climbs to ${ladder[1]}!`;
+      sound("climb");await sleep(350);player.position=ladder[1];renderTokens();renderPlayerList();await sleep(300);
+      if(player.position===100) {
+        state.winner=index;addLog(`${player.name} reached 100 by ladder and wins!`);
+        sound("win");saveGame();updateTurnUI();showWinner();
+        return {special:true,won:true};
+      }
+      return {special:true,won:false};
+    }
+    const snake=SNAKES.find(pair=>pair[0]===player.position);
+    if(snake) {
+      addLog(`${player.name} rolled ${steps} and slid from ${snake[0]} to ${snake[1]}.`);
+      $("status").textContent=`🐍 ${player.name} slides to ${snake[1]}!`;
+      sound("slide");await sleep(300);player.position=snake[1];renderTokens();renderPlayerList();await sleep(350);
+      return {special:true,won:false};
+    }
+    addLog(`${player.name} rolled ${steps} and moved to ${player.position}.`);
+    $("status").textContent=`${player.name} moved to ${player.position}.`;
+    return {special:false,won:false};
+  }
+  async function takeTurn() {
+    if(busy || !state || state.winner!==null && state.winner!==undefined) return;
+    busy=true;updateTurnUI();
+    const player=state.players[state.current];
+    const die=$("die");die.classList.add("rolling");sound("dice");
+    const reduced=window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    for(let i=0;i<(reduced?2:9);i++){renderDie(1+Math.floor(Math.random()*6));await sleep(reduced?35:75)}
+    const roll=1+Math.floor(Math.random()*6);
+    renderDie(roll);die.classList.remove("rolling");
+    state.lastRoll=roll;
+    $("diceTitle").textContent=`Rolled a ${roll}!`;
+    const result=await movePlayerBySteps(player,roll,state.current);
+    if(result.won) {
+      busy=false;saveGame();updateTurnUI();return;
+    }
+    const extra=state.extraSix && roll===6;
+    if(extra) addLog(`${player.name} rolled a 6 and gets an extra turn.`);
+    else state.current=(state.current+1)%state.players.length;
+    busy=false;saveGame();updateTurnUI();
+    if(state.players[state.current].type==="computer" && state.winner==null) {
+      $("status").textContent=`${state.players[state.current].name} is thinking…`;
+      setTimeout(()=>takeTurn(),650);
+    }
+  }
+  function showWinner() {
+    if(state.winner===null || state.winner===undefined) return;
+    $("winnerTitle").textContent=`${state.players[state.winner].name} wins!`;
+    $("winnerText").textContent=`Congratulations! ${state.players[state.winner].name} reached square 100.`;
+    $("winnerModal").hidden=false;
+    $("againBtn").focus();
+  }
+  function startGame() {
+    const count=Number($("playerCount").value);
+    const players=[];
+    for(let i=0;i<count;i++){
+      const name=$(`playerName${i}`).value.trim()||`Player ${i+1}`;
+      players.push({name,color:$(`playerColor${i}`).value,type:$(`playerType${i}`).value,position:1});
+    }
+    state={players,current:0,extraSix:$("extraSix").checked,lastRoll:1,log:[],winner:null};
+    busy=false;$("winnerModal").hidden=true;saveGame();renderGame();
+    if(state.players[0].type==="computer") setTimeout(()=>takeTurn(),650);
+  }
+  function returnToSetup() {
+    busy=false;$("winnerModal").hidden=true;$("gameScreen").hidden=true;$("setupScreen").hidden=false;
+    if(state){$("playerCount").value=String(state.players.length);$("extraSix").checked=state.extraSix;renderPlayerFields();
+      state.players.forEach((p,i)=>{const n=$(`playerName${i}`),c=$(`playerColor${i}`),t=$(`playerType${i}`);if(n)n.value=p.name;if(c)c.value=p.color;if(t)t.value=p.type;});}
+  }
+
+  // ===== Event listeners =====
+  $("playerCount").addEventListener("change",renderPlayerFields);
+  $("startBtn").addEventListener("click",startGame);
+  $("rollBtn").addEventListener("click",takeTurn);
+  $("newGameBtn").addEventListener("click",returnToSetup);
+  $("clearSaveBtn").addEventListener("click",()=>{if(confirm("Delete the saved game and return to setup?")){clearSavedGame();state=null;returnToSetup();}});
+  $("againBtn").addEventListener("click",()=>{clearSavedGame();$("winnerModal").hidden=true;returnToSetup();});
+  $("muteBtn").addEventListener("click",()=>{
+    muted=!muted;$("muteBtn").textContent=muted?"🔇 Sound off":"🔊 Sound on";
+    $("muteBtn").setAttribute("aria-pressed",String(muted));
+    $("muteBtn").setAttribute("aria-label",muted?"Turn sound effects on":"Mute sound effects");
+    if(!muted) playTone(520,.08);
+  });
+
+  // ===== App startup: restore saved game when possible =====
+  renderPlayerFields();
+  if(loadGame()) {
+    renderGame();
+    if(state.winner==null && state.players[state.current]?.type==="computer") setTimeout(()=>takeTurn(),650);
+  } else {
+    state={players:[],current:0,extraSix:false,lastRoll:1,log:[],winner:null};
+    $("setupScreen").hidden=false;$("gameScreen").hidden=true;
+  }
+})();
+</script>
+
+<script>
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("./sw.js").catch(err => console.warn("Offline setup unavailable:", err));
+  });
+}
+</script>
+\n</body>
+</html>
